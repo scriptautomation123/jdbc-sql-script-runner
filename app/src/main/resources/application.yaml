@@ -120,11 +120,17 @@ databases:
           "2003": "CONN_FAILED"       # Can't connect to MySQL server
           "2013": "CONN_FAILED"       # Lost connection
 
-vault:
-  vault-base-url: ""
-  vault-role-id: ""
-  vault-secret-id: ""
-  vault-ait: ""
+vaults:
+  - id: "user1"
+    base-url: ""
+    role-id: ""
+    secret-id: ""
+    ait: ""
+  - id: "user2"
+    base-url: ""
+    role-id: ""
+    secret-id: ""
+    ait: ""
 
 # Default validation timeouts
 validation:

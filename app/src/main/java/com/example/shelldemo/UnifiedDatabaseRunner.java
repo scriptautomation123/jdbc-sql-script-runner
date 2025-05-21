@@ -26,6 +26,7 @@ import com.example.shelldemo.vault.exception.VaultException;
 import com.example.shelldemo.validate.DatabaserOperationValidator;
 
 import java.util.Arrays;
+import java.util.Map;
 
 @Command(name = "db", mixinStandardHelpOptions = true, version = "1.0",description = "Unified Database CLI Tool")
 public class UnifiedDatabaseRunner implements Callable<Integer> {
@@ -157,7 +158,7 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
     }
 
     private boolean validatePasswordOptions() {
-        if (vaultSecretId != null && password != null && !password.trim().isEmpty()) {
+        if (vaultSecretId != null && password != null && !password.isEmpty()) {
             logger.error("--secret and -p/--password are mutually exclusive. Please specify only one.");
             return false;
         }
@@ -165,7 +166,7 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
     }
 
     private boolean validateTarget() {
-        if (target == null || target.trim().isEmpty()) {
+        if (target == null || target.isEmpty()) {
             logger.error("Target file or procedure name is required");
             return false;
         }
@@ -175,70 +176,79 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
     private boolean setupPassword() {
         logger.debug("Entering setupPassword()");
 
-
-        // 1. If password is provided, use it
-        if (password != null && !password.trim().isEmpty()) {
-            logger.debug("Password provided via command line");
+        if (isPasswordProvided()) {
             return true;
         }
 
-        // 2. If vaultSecretId is provided on the command line
-        if (vaultSecretId != null && !vaultSecretId.trim().isEmpty()) {
-            if (vaultBaseUrl == null || vaultRoleId == null || vaultAit == null ||vaultBaseUrl.trim().isEmpty() || vaultRoleId.trim().isEmpty() || vaultAit.trim().isEmpty()) {
-                logger.error("If --secret is provided, --vault-url, --vault-role-id, and --vault-ait must also be provided.");
-                return false;
-            }
-            logger.debug("All Vault command-line parameters provided, fetching password from Vault");
-            try {
-                password = fetchPasswordFromVaultWithParams(vaultBaseUrl, vaultRoleId, vaultSecretId, vaultAit);
-            } catch (VaultOperationException e) {
-                logger.error("Failed to fetch password from Vault: {}", e.getMessage());
-                return false;
-            }
-            logger.debug("Exiting setupPassword() with password fetched from Vault (command-line params)");
-            return true;
+        if (isVaultSecretProvided()) {
+            return handleVaultSecret();
         }
 
-        // 3. If vault config is present in application.yaml
+        return handleVaultConfigOrPrompt();
+    }
+
+    private boolean isPasswordProvided() {
+        return password != null && !password.isEmpty();
+    }
+
+    private boolean isVaultSecretProvided() {
+        return vaultSecretId != null && !vaultSecretId.isEmpty();
+    }
+
+    private boolean handleVaultSecret() {
+        if (!areVaultParamsValid()) {
+            logger.error("If --secret is provided, --vault-url, --vault-role-id, and --vault-ait must also be provided.");
+            return false;
+        }
+        try {
+            password = fetchPasswordFromVaultWithParams(vaultBaseUrl, vaultRoleId, vaultSecretId, vaultAit);
+            return true;
+        } catch (VaultOperationException e) {
+            logger.error("Failed to fetch password from Vault: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean areVaultParamsValid() {
+        return vaultBaseUrl != null && vaultRoleId != null && vaultAit != null && 
+               !vaultBaseUrl.isEmpty() && !vaultRoleId.isEmpty() && !vaultAit.isEmpty();
+    }
+
+    private boolean handleVaultConfigOrPrompt() {
         var config = ConfigurationHolder.getInstance();
-        var vaultConfig = config.getVaultConfig();
+        var vaultConfigs = config.getVaultConfigs();
         
-        // Check if vault entries are not null and not empty strings
-        boolean vaultConfigured = vaultConfig != null
-            && vaultConfig.getOrDefault("vault-base-url", "").toString().trim().length() > 0
-            && vaultConfig.getOrDefault("vault-role-id", "").toString().trim().length() > 0
-            && vaultConfig.getOrDefault("vault-secret-id", "").toString().trim().length() > 0
-            && vaultConfig.getOrDefault("vault-ait", "").toString().trim().length() > 0;
+        if (vaultConfigs != null && !vaultConfigs.isEmpty()) {
+            var matchingVault = vaultConfigs.stream()
+                .filter(vault -> username.equals(vault.get("id")))
+                .findFirst();
 
-        logger.debug("vaultConfig {}", vaultConfig.toString());
-
-        if (vaultConfigured) {
-            // Set vault fields from application.yaml if not set via command line
-            if (vaultBaseUrl == null) vaultBaseUrl = (String) vaultConfig.get("vault-base-url");
-            if (vaultRoleId == null) vaultRoleId = (String) vaultConfig.get("vault-role-id");
-            if (vaultSecretId == null) vaultSecretId = (String) vaultConfig.get("vault-secret-id");
-            if (vaultAit == null) vaultAit = (String) vaultConfig.get("vault-ait");
-
-            logger.debug("Vault is configured in application.yaml, fetching password from Vault");
-            try {
-                password = fetchPasswordFromVault();
-                if (password == null || password.trim().isEmpty()) {
-                    logger.error("Vault returned empty password");
-                    return false;
-                }
-                logger.debug("Successfully fetched password from Vault");
+            if (matchingVault.isPresent() && tryFetchFromVault(matchingVault.get())) {
                 return true;
-            } catch (VaultOperationException e) {
-                logger.error("Failed to fetch password from Vault: {}", e.getMessage());
-                return false;  // Error out if vault is configured but fails
             }
         }
 
-        // 4. Prompt for password only if vault is not configured
-        logger.debug("Vault not configured, prompting user for password");
+        logger.debug("No matching vault configuration found for user: {}, prompting for password", username);
         password = promptForPassword();
-        logger.debug("Exiting setupPassword() with password from prompt");
-        return true;
+        return password != null && !password.isEmpty();
+    }
+
+    private boolean tryFetchFromVault(Map<String, Object> vault) {
+        try {
+            password = fetchPasswordFromVaultWithParams(
+                (String) vault.get("base-url"),
+                (String) vault.get("role-id"),
+                (String) vault.get("secret-id"),
+                (String) vault.get("ait")
+            );
+            if (password != null && !password.isEmpty()) {
+                logger.debug("Successfully fetched password from Vault for user: {}", username);
+                return true;
+            }
+        } catch (VaultOperationException e) {
+            logger.error("Failed to fetch password from Vault: {}", e.getMessage());
+        }
+        return false;
     }
 
     private boolean validateOracleConnection() {
@@ -255,7 +265,7 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
         }
 
         if ("thin".equalsIgnoreCase(connectionType) && 
-            (host == null || host.trim().isEmpty())) {
+            (host == null || host.isEmpty())) {
             logger.error("Host is required for connection type 'thin'");
             return false;
         }
@@ -276,7 +286,7 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
             
         String connectString = new DatabaseConnectionFactory().buildConnectionUrl(connConfig);
         logger.info(connectString);
-        if ("thin".equalsIgnoreCase(connectionType) && (host == null || host.trim().isEmpty())) {
+        if ("thin".equalsIgnoreCase(connectionType) && (host == null || host.isEmpty())) {
             logger.error("Host is required for connection type 'thin'");
             return 2;
         }
@@ -357,42 +367,6 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
         }
     }
 
-    private String fetchPasswordFromVault() throws VaultOperationException {
-        // Try command line args first, fall back to config
-       
-        String baseUrl = vaultBaseUrl;
-        String roleId = vaultRoleId;
-        String secretId = vaultSecretId;
-        String dbName = database;
-        String ait = vaultAit;
-
-        // If any required parameter is missing, try to get from config
-        if (baseUrl == null || roleId == null || secretId == null || ait == null) {
-            var config = ConfigurationHolder.getInstance();
-            var vaultConfig = config.getVaultConfig();
-            if (baseUrl == null) baseUrl = (String) vaultConfig.get("vault-base-url");
-            if (roleId == null) roleId = (String) vaultConfig.get("vault-role-id");
-            if (secretId == null) vaultSecretId = (String) vaultConfig.get("vault-secret-id");
-            if (ait == null) ait = (String) vaultConfig.get("vault-ait");
-        }
-
-        // Validate all parameters are present
-        if (baseUrl == null || dbName == null || roleId == null || secretId == null || ait == null) {
-            throw new VaultOperationException("Missing required Vault configuration parameters", null, secretId);
-        }
-
-        try {
-            return new VaultSecretFetcherBuilder()
-                .build()
-                .fetchOraclePassword(
-                    baseUrl, roleId, secretId, dbName, ait, username
-                );
-        } catch (VaultException e) {
-            throw new VaultOperationException("Failed to fetch password from Vault: " + e.getMessage(), e, secretId);
-        }
-    }
-
-    // Helper for explicit command-line vault params
     private String fetchPasswordFromVaultWithParams(String baseUrl, String roleId, String secretId, String ait) throws VaultOperationException {
         String dbName = database;
         if (baseUrl == null || dbName == null || roleId == null || secretId == null || ait == null) {
@@ -413,11 +387,11 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
      * Auto-select the correct JDBC driver if --driver-path is not provided, based on dbType.
      */
     private void setupDriverPathIfNeeded() {
-        if (driverPath != null && !driverPath.trim().isEmpty()) {
+        if (driverPath != null && !driverPath.isEmpty()) {
             logger.debug("Driver path provided: {}", driverPath);
             return;
         }
-        if (dbType == null || dbType.trim().isEmpty()) {
+        if (dbType == null || dbType.isEmpty()) {
             logger.warn("Database type (-t/--type) is not specified; cannot auto-select driver.");
             return;
         }
@@ -437,7 +411,9 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
     }
 
     public static void main(String[] args) {
-        logger.debug("Entering main with args: {}", Arrays.toString(args));
+        if (logger.isDebugEnabled()) {
+            logger.debug("Entering main with args: {}", Arrays.toString(args));
+        }
         // Configure Log4j programmatically
         ConfigurationBuilder<BuiltConfiguration> log4jConfigBuilder = ConfigurationBuilderFactory.newConfigurationBuilder();
         

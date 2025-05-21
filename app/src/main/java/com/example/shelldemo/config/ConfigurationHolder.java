@@ -11,8 +11,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * Singleton configuration holder that loads and caches application configuration at startup.
@@ -246,5 +248,18 @@ public class ConfigurationHolder {
             return new HashMap<>((Map<String, Object>) vaultObj);
         }
         return Collections.emptyMap();
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> getVaultConfigs() {
+        logger.info("Getting vault configurations");
+        Object vaultsObj = config.get("vaults");
+        if (vaultsObj instanceof List) {
+            return ((List<Object>) vaultsObj).stream()
+                .filter(Map.class::isInstance)
+                .map(obj -> new HashMap<>((Map<String, Object>) obj))
+                .collect(Collectors.toList());
+        }
+        return Collections.emptyList();
     }
 }
