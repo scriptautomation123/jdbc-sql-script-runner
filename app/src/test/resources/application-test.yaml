@@ -1,0 +1,132 @@
+# Unified application configuration
+spring:
+  application:
+    name: shell-demo
+
+# Database configurations
+databases:
+  # Database types and their configurations
+  types:
+    oracle:
+      defaultPort: 1521
+      defaults:
+        port: 1521
+        connection-type: "thin"
+      templates:
+        jdbc:
+          defaultTemplate: "jdbc:oracle:thin:@//%s:%d/%s"
+          thin: "jdbc:oracle:thin:@//%s:%d/%s"
+          ldap: "jdbc:oracle:thin:@ldap://%s:%d/%s,cn=OracleContext,dc=oracle,dc=com"
+        sql:
+          procedure: "{ ? = call %s(%s) }"
+          validation:
+            plsql: "BEGIN DBMS_UTILITY.COMPILE_SCHEMA('%s', FALSE); %s END;"
+            sql: "SELECT 1 FROM DUAL WHERE EXISTS (%s)"
+            explain: "EXPLAIN PLAN FOR %s"
+      properties:
+        java.naming.factory.initial: "com.sun.jndi.ldap.LdapCtxFactory"
+        java.naming.security.authentication: "simple"
+        java.naming.security.principal: "cn=admin,dc=example,dc=com"
+        java.naming.security.credentials: "admin123"
+      error:
+        pattern: "ORA-(\\d+)"
+        mappings:
+          "12154": "ORACLE_TNS"          # TNS:could not resolve the connect identifier
+          "12514": "ORACLE_TNS"          # TNS:listener does not currently know of service
+          "1017": "ORACLE_INVALID_USER"  # invalid username/password
+          "12541": "CONN_FAILED"         # no listener
+          "12170": "CONN_FAILED"         # connect timeout
+          "1033": "CONN_FAILED"          # oracle initialization or shutdown in progress
+          "12537": "CONN_FAILED"         # connection closed
+          "12505": "ORACLE_TNS"          # listener does not currently know of SID
+
+    sqlserver:
+      defaultPort: 1433
+      defaults:
+        port: 1433
+        connection-type: "default"
+      templates:
+        jdbc:
+          default: "jdbc:sqlserver://%s:%d;databaseName=%s"
+        sql:
+          procedure: "{ call %s(%s) }"
+          validation:
+            plsql: "EXEC sp_validateloginname %s"
+            sql: "SET PARSEONLY ON; %s; SET PARSEONLY OFF;"
+            explain: "SET SHOWPLAN_XML ON; %s; SET SHOWPLAN_XML OFF;"
+      properties:
+        loginTimeout: "30"
+        encrypt: "true"
+        trustServerCertificate: "true"
+      error:
+        pattern: "Error Number: (\\d+)"
+        mappings:
+          "4060": "CONFIG_INVALID"     # Invalid database
+          "18456": "INVALID_USER"      # Login failed
+          "233": "CONN_FAILED"         # Connection timeout
+          "53": "CONN_FAILED"          # Network error
+    
+    postgresql:
+      defaultPort: 5432
+      defaults:
+        port: 5432
+        connection-type: "default"
+      templates:
+        jdbc:
+          default: "jdbc:postgresql://%s:%d/%s"
+        sql:
+          procedure: "{ call %s(%s) }"
+          validation:
+            plsql: "DO $$ BEGIN %s END $$;"
+            sql: "EXPLAIN %s"
+            explain: "EXPLAIN (ANALYZE false, COSTS true, FORMAT TEXT) %s"
+      properties:
+        ssl: "true"
+        sslmode: "verify-full"
+      error:
+        pattern: "PSQLState: (\\w+)"
+        mappings:
+          "28P01": "INVALID_USER"      # Invalid password
+          "28000": "INVALID_USER"      # Invalid authorization
+          "3D000": "CONFIG_INVALID"    # Invalid database
+          "08006": "CONN_FAILED"       # Connection failure
+        
+    mysql:
+      defaultPort: 3306
+      defaults:
+        port: 3306
+        connection-type: "default"
+      templates:
+        jdbc:
+          default: "jdbc:mysql://%s:%d/%s"
+        sql:
+          procedure: "{ call %s(%s) }"
+          validation:
+            plsql: "CALL sys.sp_validate_procedure(%s)"
+            sql: "EXPLAIN %s"
+            explain: "EXPLAIN FORMAT=TREE %s"
+      properties:
+        useSSL: "true"
+        allowPublicKeyRetrieval: "true"
+        serverTimezone: "UTC"
+      error:
+        pattern: "Error Code: (\\d+)"
+        mappings:
+          "1045": "INVALID_USER"      # Access denied for user
+          "1049": "CONFIG_INVALID"    # Unknown database
+          "2003": "CONN_FAILED"       # Can't connect to MySQL server
+          "2013": "CONN_FAILED"       # Lost connection
+
+# Default validation timeouts
+validation:
+  timeouts:
+    sql: 10  # seconds
+    plsql: 30  # seconds
+    explain: 20  # seconds
+
+logging:
+  level:
+    root: INFO
+    com.example.shelldemo: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} -- %msg%n" 

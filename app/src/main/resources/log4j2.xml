@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Properties>
+        <!-- Main logging patterns -->
+        <Property name="LOG_PATTERN">%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} -- %msg%n</Property>
+        <Property name="CONSOLE_PATTERN">%highlight{%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36}.%M:%L -- %msg%n}{FATAL=red blink, ERROR=red, WARN=yellow bold, INFO=green, DEBUG=blue, TRACE=white}</Property>
+        <Property name="LOG_FILE_PATH">logs/application.log</Property>
+        <Property name="ERROR_LOG_FILE_PATH">logs/error.log</Property>
+    </Properties>
+
+    <Appenders>
+        <!-- Enhanced Console Appender with highlighting -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <JsonLayout compact="true" eventEol="true"/>
+        </Console>
+
+        <!-- Dedicated Console Appender for ResultSet output -->
+        <Console name="ResultSetConsole" target="SYSTEM_OUT">
+            <PatternLayout pattern="%msg%n"/>
+        </Console>
+
+        <!-- Main Rolling File Appender -->
+        <RollingRandomAccessFile name="File"
+                               fileName="${LOG_FILE_PATH}"
+                               filePattern="logs/archive/application-%d{yyyy-MM-dd}-%i.log.gz"
+                               append="true">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30">
+                <Delete basePath="logs/archive">
+                    <IfLastModified age="60d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingRandomAccessFile>
+        
+        <!-- Errors Only Rolling File Appender -->
+        <RollingRandomAccessFile name="ErrorFile"
+                               fileName="${ERROR_LOG_FILE_PATH}"
+                               filePattern="logs/archive/error-%d{yyyy-MM-dd}-%i.log.gz"
+                               append="true">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="50 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="30"/>
+            <!-- Only log errors and above -->
+            <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+        </RollingRandomAccessFile>
+        
+        <!-- Async wrapper for better performance -->
+        <Async name="AsyncFile">
+            <AppenderRef ref="File"/>
+            <BufferSize>1000</BufferSize>
+        </Async>
+    </Appenders>
+
+    <Loggers>
+        <!-- Dedicated logger for ResultSet output -->
+        <Logger name="com.example.shelldemo.resultset" level="INFO" additivity="false">
+            <AppenderRef ref="ResultSetConsole"/>
+        </Logger>
+
+        <!-- Configuration loading loggers -->
+        <Logger name="com.example.shelldemo.config.YamlConfigReader" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncFile"/>
+            <AppenderRef ref="ErrorFile"/>
+        </Logger>
+
+        <Logger name="com.example.shelldemo.connection.DatabaseConnectionFactory" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncFile"/>
+            <AppenderRef ref="ErrorFile"/>
+        </Logger>
+        
+        <Logger name="com.example.shelldemo.config.DatabaseProperties" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncFile"/>
+            <AppenderRef ref="ErrorFile"/>
+        </Logger>
+
+        <!-- Database operations with detailed level -->
+        <Logger name="com.example.shelldemo.UnifiedDatabaseOperation" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncFile"/>
+            <AppenderRef ref="ErrorFile"/>
+        </Logger>
+
+        <Logger name="com.example.shelldemo.UnifiedDatabaseRunner" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncFile"/>
+            <AppenderRef ref="ErrorFile"/>
+        </Logger>
+
+        <Logger name="com.example.shelldemo.parser.SqlScriptParser" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncFile"/>
+            <AppenderRef ref="ErrorFile"/>
+        </Logger>
+
+
+        <Logger name="com.example.shelldemo" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncFile"/>
+            <AppenderRef ref="ErrorFile"/>
+        </Logger>
+
+        <Logger name="com.example.shelldemo.vault" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncFile"/>
+            <AppenderRef ref="ErrorFile"/>
+        </Logger>
+
+
+        <!-- Root Logger -->
+        <Root level="INFO">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncFile"/>
+            <AppenderRef ref="ErrorFile" level="ERROR"/>
+        </Root>
+    </Loggers>
+</Configuration>

@@ -1,0 +1,4 @@
+com.example.shelldemo.spi.OracleVendor
+com.example.shelldemo.spi.PostgreSqlVendor
+com.example.shelldemo.spi.MySqlVendor
+com.example.shelldemo.spi.SqlServerVendor

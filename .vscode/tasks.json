@@ -1,0 +1,273 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Maven: Clean",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "clean"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "close": false,
+        "clear": false,
+        "group": "buildTasks"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Maven: Install",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "install"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "dependsOn": "Maven: Clean",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "close": true,
+        "group": "buildTasks"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Maven: Test",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "test"
+      ],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "close": true,
+        "group": "buildTasks"
+      },
+      "problemMatcher": [
+        "$tsc"
+      ]
+    },
+    {
+      "label": "Maven: Package",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "package"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "close": false,
+        "clear": false,
+        "group": "buildTasks"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Maven: Deploy to GitHub Packages",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "deploy",
+        "-Dmaven.install.skip=true",
+        "-DaltDeploymentRepository=github::default::${env:GITHUB_SERVER_URL}/${env:GITHUB_REPOSITORY#*/}"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "dependsOn": "Maven: Package",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "close": true,
+        "group": "buildTasks"
+      },
+      "options": {
+        "env": {
+          "GITHUB_TOKEN": "${env:GITHUB_TOKEN}"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Maven: clean package (local)",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Maven: Clean",
+        "Maven: Package"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": false,
+        "close": false,
+        "echo": true,
+        "group": "buildTasks"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Maven: Build and Deploy (GitHub Workflow)",
+      "type": "shell",
+      "command": "echo",
+      "args": [
+        "This task combines build, test and deploy to GitHub Packages, designed for CI workflows"
+      ],
+      "dependsOn": [
+        "Maven: Install",
+        "Maven: Test",
+        "Maven: Deploy to GitHub Packages"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "close": true,
+        "group": "buildTasks"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Maven: Run (development)",
+      "type": "shell",
+      "command": "mvn",
+      "args": [
+        "spring-boot:run"
+      ],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "close": true,
+        "group": "buildTasks"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      },
+      "dependsOn": "Maven: Install",
+      "problemMatcher": []
+    },
+    {
+      "label": "Connect to TinyPC WSL",
+      "type": "shell",
+      "command": "ssh",
+      "args": [
+        "-i",
+        "C:\\Users\\swapa\\.ssh\\id_rsz_tinypcwsl",
+        "swapanc@tinypcwsl",
+        "-p",
+        "2222"
+      ],
+      "group": {
+        "kind": "none",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "group": "sshTasks"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Check System Status",
+      "type": "shell",
+      "command": "ssh",
+      "args": [
+        "-i",
+        "C:\\Users\\swapa\\.ssh\\id_rsz_tinypcwsl",
+        "swapanc@tinypcwsl",
+        "-p",
+        "2222",
+        "uptime && df -h && free -h"
+      ],
+      "group": {
+        "kind": "none",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "group": "sshTasks"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "List Running Processes",
+      "type": "shell",
+      "command": "ssh",
+      "args": [
+        "-i",
+        "C:\\Users\\swapa\\.ssh\\id_rsz_tinypcwsl",
+        "swapanc@tinypcwsl",
+        "-p",
+        "2222",
+        "ps aux | head -n 10"
+      ],
+      "group": {
+        "kind": "none",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "group": "sshTasks"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Check Network Status",
+      "type": "shell",
+      "command": "ssh",
+      "args": [
+        "-i",
+        "C:\\Users\\swapa\\.ssh\\id_rsz_tinypcwsl",
+        "swapanc@tinypcwsl",
+        "-p",
+        "2222",
+        "ip addr show && netstat -tuln"
+      ],
+      "group": {
+        "kind": "none",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "group": "sshTasks"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

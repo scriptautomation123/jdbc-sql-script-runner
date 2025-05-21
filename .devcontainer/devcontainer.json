@@ -1,0 +1,69 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/java-postgres
+{
+	"name": "Java & PostgreSQL & Oracle",
+	"dockerComposeFile": "docker-compose.yml",
+	"service": "app",
+	"workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+	"features": {
+		"ghcr.io/devcontainers/features/desktop-lite:1": {},
+		"ghcr.io/lukewiwa/features/wait-for-it:0": {},
+		"ghcr.io/skriptfabrik/devcontainer-features/infisical-cli:1": {},
+		"ghcr.io/devcontainers/features/github-cli:1": {},
+		"ghcr.io/devcontainers/features/git:1": {
+			"version": "latest",
+			"ppa": false
+		}
+	},
+
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {}
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// This can be used to network with other containers or with the host.
+	"forwardPorts": [5432, 1521, 80, 443],
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "sh -e .devcontainer/post-create.sh",
+
+	// Configure tool-specific properties.
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"GitHub.vscode-pull-request-github",
+				"eamodio.gitlens",
+				"redhat.java",
+				"vscjava.vscode-java-debug",
+				"vscjava.vscode-java-test",
+				"vscjava.vscode-maven"
+			],
+			"settings": {
+				"git.enableCommitSigning": false,
+				"git.autofetch": true,
+				"git.confirmSync": true,
+				"github.gitAuthentication": true,
+				// Add read-only specific settings
+				"files.readonlyInclude": {
+					"**/.env.example": true,
+					"**/pom.xml": true
+				},
+				"java.configuration.updateBuildConfiguration": "automatic"
+			}
+		}
+	},
+
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	"remoteUser": "vscode",
+
+	// Use initializeCommand to check requirements
+	"initializeCommand": "sh -e .devcontainer/initialize.sh",
+
+	// Configure container-specific paths for read-only support
+	"containerEnv": {
+		"MAVEN_CONFIG": "/workspaces/.m2",
+		"MAVEN_OPTS": "-Dmaven.repo.local=/workspaces/.m2/repository"
+	},
+
+	// Removed mounts to support read-only access
+	"mounts": []
+}

@@ -1,0 +1,62 @@
+# ${APPLICATION_NAME}
+
+## Overview
+A shell demo application built with Java and Picocli, demonstrating command-line interface functionality with structured logging.
+
+## Prerequisites
+- Java 11 or higher
+- Maven 3.6 or higher
+
+## Project Structure
+
+└── 📁shdemmo-bundle-linux
+    └── 📁app
+        └── dbscriptrunner-1.0-SNAPSHOT.jar
+    └── 📁drivers
+        └── 📁mysql
+            └── mysql-connector-j-8.3.0.jar
+        └── 📁oracle
+            └── ojdbc11-23.7.0.25.01.jar
+        └── 📁postgresql
+            └── postgresql-42.7.2.jar
+        └── 📁sqlserver
+    └── 📁resources
+        └── 📁sql
+            └── create_employee_info_proc_fixed.sql
+            └── create_employee_info_proc.sql
+            └── drop_employee_info_proc.sql
+            └── test_function.sql
+            └── test_procedure.sql
+            └── test_query.sql
+    └── 📁runtime
+        └── 📁bin
+        └── 📁conf
+        └── 📁legal
+        └── 📁lib
+        └── release
+    └── README.md
+    └── run.bat
+    └── run.sh
+
+
+## Sample Usage with Provided SQL Scripts
+
+The `resources/sql` directory in this bundle contains sample SQL scripts for testing and demonstration. You can use these scripts with the CLI as shown below:
+
+```bash 
+# Example: Run a simple connection test
+./run.sh -t oracle --connection-type thin -H localhost -P 1521 -u HR -p HR -d FREEPDB1 --stop-on-error --print-statements resources/sql/connection_test.sql
+
+# Example: Run a DDL script
+./run.sh -t oracle --connection-type thin -H localhost -P 1521 -u HR -p HR -d FREEPDB1 --stop-on-error --print-statements resources/sql/create_employee_info_proc.sql
+
+# Example: Run a DML script transactionally
+./run.sh -t oracle --connection-type thin -H localhost -P 1521 -u HR -p HR -d FREEPDB1 --stop-on-error --print-statements --transactional resources/sql/dml_script.sql
+
+# Example: Run a complex query
+./run.sh -t oracle --connection-type thin -H localhost -P 1521 -u HR -p HR -d FREEPDB1 --stop-on-error --print-statements resources/sql/hr_complex_query.sql
+```
+
+**Note:**
+- The `resources/sql` directory is included for convenience and contains scripts used in automated tests and for manual experimentation.
+- You can add your own scripts to this directory or use it as a template for your own SQL files. 

@@ -1,0 +1,121 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "VS Code Tasks Schema",
+    "type": "object",
+    "required": ["version"],
+    "properties": {
+        "version": {
+            "type": "string",
+            "enum": ["2.0.0"]
+        },
+        "tasks": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["label"],
+                "properties": {
+                    "label": {
+                        "type": "string",
+                        "description": "The task's label used in the user interface."
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": ["shell", "process"],
+                        "default": "shell"
+                    },
+                    "command": {
+                        "type": "string",
+                        "description": "The command to execute"
+                    },
+                    "args": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "group": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "enum": ["build", "test", "none"]
+                            },
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "kind": {
+                                        "type": "string",
+                                        "enum": ["build", "test", "none"]
+                                    },
+                                    "isDefault": {
+                                        "type": "boolean"
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    "presentation": {
+                        "type": "object",
+                        "properties": {
+                            "reveal": {
+                                "type": "string",
+                                "enum": ["always", "silent", "never"]
+                            },
+                            "panel": {
+                                "type": "string",
+                                "enum": ["shared", "dedicated", "new"]
+                            },
+                            "group": {
+                                "type": "string"
+                            },
+                            "showReuseMessage": {
+                                "type": "boolean"
+                            },
+                            "clear": {
+                                "type": "boolean"
+                            },
+                            "echo": {
+                                "type": "boolean"
+                            },
+                            "close": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "problemMatcher": {
+                        "oneOf": [
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            {
+                                "type": "string"
+                            }
+                        ]
+                    },
+                    "dependsOn": {
+                        "oneOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            }
+                        ]
+                    },
+                    "dependsOrder": {
+                        "type": "string",
+                        "enum": ["sequence", "parallel"]
+                    },
+                    "isBackground": {
+                        "type": "boolean"
+                    }
+                }
+            }
+        }
+    }
+} 

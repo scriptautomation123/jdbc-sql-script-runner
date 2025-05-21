@@ -1,0 +1,108 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Connect to TinyPC WSL",
+      "type": "shell",
+      "command": "ssh",
+      "args": [
+        "-i",
+        "C:\\Users\\swapa\\.ssh\\id_rsz_tinypcwsl",
+        "swapanc@tinypcwsl",
+        "-p",
+        "2222"
+      ],
+      "group": {
+        "kind": "none",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "group": "sshTasks"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Check System Status",
+      "type": "shell",
+      "command": "ssh",
+      "args": [
+        "-i",
+        "C:\\Users\\swapa\\.ssh\\id_rsz_tinypcwsl",
+        "swapanc@tinypcwsl",
+        "-p",
+        "2222",
+        "uptime && df -h && free -h"
+      ],
+      "group": {
+        "kind": "none",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "group": "sshTasks"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "List Running Processes",
+      "type": "shell",
+      "command": "ssh",
+      "args": [
+        "-i",
+        "C:\\Users\\swapa\\.ssh\\id_rsz_tinypcwsl",
+        "swapanc@tinypcwsl",
+        "-p",
+        "2222",
+        "ps aux | head -n 10"
+      ],
+      "group": {
+        "kind": "none",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "group": "sshTasks"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Check Network Status",
+      "type": "shell",
+      "command": "ssh",
+      "args": [
+        "-i",
+        "C:\\Users\\swapa\\.ssh\\id_rsz_tinypcwsl",
+        "swapanc@tinypcwsl",
+        "-p",
+        "2222",
+        "ip addr show && netstat -tuln"
+      ],
+      "group": {
+        "kind": "none",
+        "isDefault": false
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "showReuseMessage": false,
+        "group": "sshTasks"
+      },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "sshKeyPath",
+      "type": "promptString",
+      "description": "Path to SSH key file",
+      "default": "C:\\Users\\swapa\\.ssh\\id_rsz_tinypcwsl"
+    }
+  ]
+} 

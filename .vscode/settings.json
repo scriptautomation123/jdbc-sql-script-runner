@@ -1,0 +1,123 @@
+{
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "taskExplorer.exclude": [
+        "**/.vscode-test/**",
+        "**/Assets/**",
+        "**/bin/**",
+        "**/build/**",
+        "**/dist/**",
+        "**/doc/**",
+        "**/example/**",
+        "**/examples/**",
+        "**/ext/**",
+        "**/obj/**",
+        "**/out/**",
+        "**/output/**",
+        "**/packages/**",
+        "**/release/**",
+        "**/releases/**",
+        "**/samples/**",
+        "**/sdks/**",
+        "**/static/**",
+        "**/target/**",
+        "**/test/**",
+        "**/third_party/**",
+        "**/vendor/**",
+        "**/work/**",
+        "/home/swapanc/.config/vscode/tasks.json"
+    ],
+    "workbench.colorCustomizations": {
+        "activityBar.activeBackground": "#2f7c47",
+        "activityBar.background": "#2f7c47",
+        "activityBar.foreground": "#e7e7e7",
+        "activityBar.inactiveForeground": "#e7e7e799",
+        "activityBarBadge.background": "#422c74",
+        "activityBarBadge.foreground": "#e7e7e7",
+        "commandCenter.border": "#e7e7e799",
+        "sash.hoverBorder": "#2f7c47",
+        "statusBar.background": "#215732",
+        "statusBar.foreground": "#e7e7e7",
+        "statusBarItem.hoverBackground": "#2f7c47",
+        "statusBarItem.remoteBackground": "#215732",
+        "statusBarItem.remoteForeground": "#e7e7e7",
+        "titleBar.activeBackground": "#215732",
+        "titleBar.activeForeground": "#e7e7e7",
+        "titleBar.inactiveBackground": "#21573299",
+        "titleBar.inactiveForeground": "#e7e7e799"
+    },
+    "peacock.remoteColor": "#215732",
+    "sonarlint.connectedMode.project": {
+        "connectionId": "swapan-datahawklab",
+        "projectKey": "swapan-datahawklab_shdemmo"
+    },
+    "sonarlint.pathToExclude": [
+        "**/*.sql"
+    ],
+    "folder-color.pathColors": [
+        {
+            "folderPath": "shdemmo/app/",
+            "color": "foldercolorizer.color_33ccff",
+            "badge": "🤢"
+        },
+        {
+            "folderPath": "shdemmo/.vscode/",
+            "color": "foldercolorizer.color_cc0066"
+        },
+        {
+            "folderPath": "shdemmo/.vscode/task-configs/",
+            "color": "foldercolorizer.color_cccc33"
+        },
+        {
+            "folderPath": "shdemmo/app/src/test/java/com/example/shelldemo/parser/",
+            "color": "foldercolorizer.color_00cc66"
+        },
+        {
+            "folderPath": "shdemmo/app/src/test/java/com/example/shelldemo/NoStackTraceWatcher.java/",
+            "color": "foldercolorizer.color_ff3300"
+        },
+        {
+            "folderPath": "shdemmo/app/src/test/java/com/example/shelldemo/UnifiedDatabaseRunnerTest.java/",
+            "color": "foldercolorizer.color_0000ff"
+        },
+        {
+            "folderPath": "shdemmo/app/src/test/java/com/example/shelldemo/",
+            "color": "foldercolorizer.color_eeeeee"
+        },
+        {
+            "folderPath": "shdemmo/app/src/main/java/com/example/shelldemo/connection/",
+            "color": "foldercolorizer.color_0033ff"
+        },
+        {
+            "folderPath": "shdemmo/app/src/main/java/com/example/shelldemo/exception/",
+            "color": "foldercolorizer.color_99cc99"
+        },
+        {
+            "folderPath": "shdemmo/app/src/main/java/com/example/shelldemo/parser/",
+            "color": "foldercolorizer.color_cc00cc"
+        },
+        {
+            "folderPath": "shdemmo/app/src/main/java/com/example/shelldemo/validate/",
+            "color": "foldercolorizer.color_00cc33"
+        },
+        {
+            "folderPath": "shdemmo/app/src/main/java/com/example/shelldemo/UnifiedDatabaseOperation.java/",
+            "color": "foldercolorizer.color_00cccc"
+        },
+        {
+            "folderPath": "shdemmo/app/src/main/java/com/example/shelldemo/UnifiedDatabaseOperationBuilder.java/",
+            "color": "foldercolorizer.color_00cccc"
+        },
+        {
+            "folderPath": "shdemmo/app/src/main/java/com/example/shelldemo/UnifiedDatabaseRunner.java/",
+            "color": "foldercolorizer.color_00cccc"
+        },
+        {
+            "folderPath": "shdemmo/app/src/main/java/com/example/shelldemo/spi/",
+            "color": "foldercolorizer.color_00cc00"
+        },
+        {
+            "folderPath": "shdemmo/app/src/main/java/com/example/shelldemo/sqlhandling/",
+            "color": "foldercolorizer.color_ffcc00"
+        }
+    ]
+}
