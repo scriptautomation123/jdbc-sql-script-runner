@@ -1,14 +1,30 @@
 @echo off
-setlocal enabledelayedexpansion
 
-REM Get the directory where the script is located
-set SCRIPT_DIR=%~dp0
-set BUNDLE_DIR=%SCRIPT_DIR%
-set APP_JAR=%BUNDLE_DIR%app\dbscriptrunner-1.0-SNAPSHOT.jar
-set LOG_CONFIG=%BUNDLE_DIR%resources\log4j2.xml
-set JAVA_OPTS=-Dlog4j.configurationFile=%LOG_CONFIG%
+REM Get the directory where the script is located and remove trailing backslash if present
+set "SCRIPT_DIR=%~dp0"
+if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
+set "BUNDLE_DIR=%SCRIPT_DIR%"
+set "APP_JAR=%BUNDLE_DIR%\app\dbscriptrunner-1.0-SNAPSHOT.jar"
+set "LOG_CONFIG=%BUNDLE_DIR%\resources\log4j2.xml"
+set "APP_CONFIG=%BUNDLE_DIR%\resources\application.yaml"
+set "BUNDLED_JRE=%BUNDLE_DIR%\runtime"
+set "JAVA_OPTS=-Dlog4j.configurationFile=%LOG_CONFIG% -Dapp.config=%APP_CONFIG%"
+
+REM Use bundled JRE if it exists
+if exist "%BUNDLED_JRE%\bin\java.exe" (
+    set "JAVA_HOME=%BUNDLED_JRE%"
+    set "JAVA_CMD=%JAVA_HOME%\bin\java.exe"
+    echo Using bundled JRE: %JAVA_HOME%
+) else (
+    if defined JAVA_HOME (
+        set "JAVA_CMD=%JAVA_HOME%\bin\java.exe"
+        echo Using JAVA_HOME: %JAVA_HOME%
+    ) else (
+    ) else (
+        set "JAVA_CMD=java"
+        echo Using system Java from PATH
+    )
+)
 
 REM Only launch the Java application with the provided arguments
-%JAVA_HOME%\bin\java %JAVA_OPTS% -jar "%APP_JAR%" %*
-
-endlocal
+"%JAVA_CMD%" %JAVA_OPTS% -jar "%APP_JAR%" %*

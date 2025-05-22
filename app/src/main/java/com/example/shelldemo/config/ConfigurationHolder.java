@@ -17,28 +17,26 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * Singleton configuration holder that loads and caches application configuration at startup.
+ * Configuration holder that loads and caches application configuration at startup.
  */
-public class ConfigurationHolder {
-    private static final Logger logger = LogManager.getLogger(ConfigurationHolder.class);
+public enum ConfigurationHolder {
+    INSTANCE;
+    
+    private final Logger logger = LogManager.getLogger(ConfigurationHolder.class);
     private static final String CONFIG_PATH = "application.yaml";
-    private static ConfigurationHolder instance;
     
     private final Map<String, Object> config;
     private final Map<String, String> runtimeProperties;
 
-    private ConfigurationHolder() {
+    ConfigurationHolder() {
         this.runtimeProperties = new ConcurrentHashMap<>();
         logger.debug("Initializing ConfigurationHolder and loading configuration");
         this.config = loadConfig();
         logger.info("ConfigurationHolder initialized successfully");
     }
 
-    public static synchronized ConfigurationHolder getInstance() {
-        if (instance == null) {
-            instance = new ConfigurationHolder();
-        }
-        return instance;
+    public static ConfigurationHolder getInstance() {
+        return INSTANCE;
     }
 
     @SuppressWarnings("unchecked")

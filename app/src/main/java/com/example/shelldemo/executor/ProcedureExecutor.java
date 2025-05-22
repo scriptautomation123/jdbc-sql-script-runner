@@ -23,17 +23,7 @@ import com.example.shelldemo.util.LoggingUtils;
 /**
  * Executor for stored procedures and PL/SQL blocks.
  */
-public final class ProcedureExecutor implements SqlExecutor {
-    private final DatabaseContext context;
-    
-    /**
-     * Creates a new ProcedureExecutor.
-     *
-     * @param context The database context
-     */
-    public ProcedureExecutor(DatabaseContext context) {
-        this.context = context;
-    }
+public record ProcedureExecutor(DatabaseContext context) implements SqlExecutor {
     
     @Override
     public Map<String, Object> execute(SqlStatement statement) throws SQLException {
@@ -93,11 +83,7 @@ public final class ProcedureExecutor implements SqlExecutor {
         if (user != null) ThreadContext.put("user", user);
         logger.debug("Entering ProcedureExecutor.callProcedure with procedureName: {}, inParams: {}, outParams: {}", procedureName, inParams, outParams);
         try {
-            Map<String, Object> result = context.getTransactionManager().executeInTransaction(conn -> {
-                return doCallProcedure(conn, procedureName, inParams, outParams);
-            });
-            logger.debug("Exiting ProcedureExecutor.callProcedure with result: {}", result);
-            return result;
+            return context.getTransactionManager().executeInTransaction(conn -> doCallProcedure(conn, procedureName, inParams, outParams));
         } catch (SQLException e) {
             throw ExceptionUtils.handleSQLException(
                 e, "call procedure " + procedureName, ErrorType.OP_PROCEDURE, logger);
@@ -106,16 +92,13 @@ public final class ProcedureExecutor implements SqlExecutor {
         }
     }
     
-    /**
-     * Internal method to call a stored procedure.
-     */
+
     private Map<String, Object> doCallProcedure(
             Connection connection, 
             String procedureName,
             List<ProcedureParam> inParams,
             List<ProcedureParam> outParams) throws SQLException {
         
-        // Build call string: {call procedure_name(?, ?, ?)}
         StringBuilder callString = new StringBuilder("{call ")
             .append(procedureName)
             .append("(");

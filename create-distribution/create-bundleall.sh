@@ -15,27 +15,7 @@ set -e
 export MSYS_NO_PATHCONV=1
 export MSYS2_ARG_CONV_EXCL="*"
 
-# Robust OS detection for both Git Bash and Windows CMD/PowerShell
-IS_WINDOWS=false
-if command -v uname >/dev/null 2>&1; then
-    case "$(uname -s)" in
-        MINGW*|MSYS*|CYGWIN*)
-            IS_WINDOWS=true
-            ;;
-    esac
-fi
-if [ "$IS_WINDOWS" = false ] && [ "${OS:-}" = "Windows_NT" ]; then
-    IS_WINDOWS=true
-fi
-
-# Set bundle name based on OS
-if [ "$IS_WINDOWS" = true ]; then
-    BUNDLE_NAME="shdemmo-bundle-windows"
-else
-    BUNDLE_NAME="shdemmo-bundle-unix"
-fi
-
-# Default values (can be overridden by args or auto-detection)
+#Default values (can be overridden by args or auto-detection)
 APP_NAME=""
 APP_VERSION=""
 MAIN_CLASS=""
@@ -46,21 +26,42 @@ DRIVERS_FILE="create-distribution/drivers.properties"
 ARTIFACT=""
 ADD_COMMON_DRIVERS=true
 
+# Function to detect the operating system
+detect_os() {
+    local is_windows=false
+    if command -v uname >/dev/null 2>&1; then
+        case "$(uname -s)" in
+            MINGW*|MSYS*|CYGWIN*)
+                is_windows=true
+                ;;
+        esac
+    fi
+    if [ "$is_windows" = false ] && [ "${OS:-}" = "Windows_NT" ]; then
+        is_windows=true
+    fi
+    echo "$is_windows"
+}
+
+# Initialize global IS_WINDOWS variable
+IS_WINDOWS=$(detect_os)
+
 # Colors for output
 if [ -t 1 ]; then
     RED='\033[0;31m'
     GREEN='\033[0;32m'
     YELLOW='\033[1;33m'
+    PURPLE='\033[0;35m'  # Add purple color
     NC='\033[0m' # No Color
 else
     RED=''
     GREEN=''
     YELLOW=''
+    PURPLE=''
     NC=''
 fi
 
 log_info() {
-    echo -e "${GREEN}[INFO]${NC} $*"
+    echo -e "${PURPLE}[INFO]${NC} $*"  # Change from GREEN to PURPLE
 }
 log_error() {
     echo -e "${RED}[ERROR]${NC} $*" >&2
@@ -133,10 +134,104 @@ copy_file() {
     fi
 }
 
+create_directory() {
+    local dir="$1"
+    if [ "$IS_WINDOWS" = true ]; then
+        mkdir -p "$(cygpath -w "$dir")"
+    else
+        mkdir -p "$dir"
+    fi
+}
+
 make_executable() {
     local file="$1"
     if [ "$IS_WINDOWS" = false ]; then
         chmod +x "$file"
+    fi
+}
+
+# Function to detect script directory and project root in a cross-platform way
+detect_script_locations() {
+    # Get script directory in a cross-platform way
+    if [ "$IS_WINDOWS" = true ]; then
+        SCRIPT_PATH="${BASH_SOURCE[0]}"
+        SCRIPT_DIR=$(powershell -command "Split-Path -Parent '$SCRIPT_PATH'" 2>/dev/null)
+        if [ -z "$SCRIPT_DIR" ]; then
+            # Fallback for Git Bash
+            SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        fi
+        
+        # Get project root
+        PROJECT_ROOT=$(powershell -command "Split-Path -Parent '$SCRIPT_DIR'" 2>/dev/null)
+        if [ -z "$PROJECT_ROOT" ]; then
+            # Fallback for Git Bash
+            PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+        fi
+    else
+        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+    fi
+    
+    M2_HOME="$(find_maven_home)"
+}
+
+# Function to auto-detect JAVA_HOME across platforms
+auto_detect_java_home() {
+    if [ -z "$JAVA_HOME" ]; then
+        if [ "$IS_WINDOWS" = true ]; then
+            # Try to find java.exe using PowerShell on Windows
+            JAVA_EXE_PATH=$(powershell -command "(Get-Command java -ErrorAction SilentlyContinue).Path" 2>/dev/null)
+            if [ -n "$JAVA_EXE_PATH" ]; then
+                # Use PowerShell to get parent directory (equivalent to dirname)
+                JAVA_BIN_DIR=$(powershell -command "Split-Path -Parent '$JAVA_EXE_PATH'" 2>/dev/null)
+                JAVA_HOME_WIN=$(powershell -command "Split-Path -Parent '$JAVA_BIN_DIR'" 2>/dev/null)
+                
+                # Convert Windows path to Unix path if cygpath is available
+                if command -v cygpath >/dev/null 2>&1; then
+                    JAVA_HOME=$(cygpath -u "$JAVA_HOME_WIN")
+                else
+                    JAVA_HOME=$JAVA_HOME_WIN
+                fi
+                
+                export JAVA_HOME
+                log_info "Auto-detected JAVA_HOME as $JAVA_HOME (Windows)"
+            fi
+        else
+            JAVA_BIN=$(which java 2>/dev/null)
+            if [ -n "$JAVA_BIN" ]; then
+                JAVA_BIN=$(readlink -f "$JAVA_BIN")
+                
+                # Safe cross-platform dirname
+                if [ "$IS_WINDOWS" = true ]; then
+                    JAVA_BIN_DIR=$(powershell -command "Split-Path -Parent '$JAVA_BIN'" 2>/dev/null)
+                    JAVA_HOME=$(powershell -command "Split-Path -Parent '$JAVA_BIN_DIR'" 2>/dev/null)
+                else
+                    JAVA_HOME=$(dirname $(dirname "$JAVA_BIN"))
+                fi
+                
+                export JAVA_HOME
+                log_info "Auto-detected JAVA_HOME as $JAVA_HOME (Unix)"
+            fi
+        fi
+        if [ -z "$JAVA_HOME" ]; then
+            log_warn "Could not auto-detect JAVA_HOME. Some features may not work."
+        fi
+    fi
+}
+
+# Function to copy Java security files
+copy_java_security_files() {
+    local bundle_dir="$1"
+    
+    # Create the runtime directory for custom JRE and security files
+    create_directory "$bundle_dir/runtime/lib/security"
+
+    # Copy Java security files into the bundle's runtime
+    if [ -n "$JAVA_HOME" ] && [ -d "$JAVA_HOME/lib/security" ]; then
+        cp -r "$JAVA_HOME/lib/security/"* "$bundle_dir/runtime/lib/security/"
+        log_info "Copied Java security files from $JAVA_HOME/lib/security to $bundle_dir/runtime/lib/security"
+    else
+        log_warn "JAVA_HOME is not set or $JAVA_HOME/lib/security does not exist. Skipping security files copy."
     fi
 }
 
@@ -149,7 +244,7 @@ download_jdbc_driver() {
     log_info "Downloading $db_type JDBC driver..."
     
     # Create target directory if it doesn't exist
-    mkdir -p "$target_dir"
+    create_directory "$target_dir"
     
     # Split Maven coordinates
     IFS=':' read -r groupId artifactId version <<< "$maven_coords"
@@ -205,7 +300,13 @@ create_bundle_structure() {
     local BUNDLE_DIR="$1"
     
     # Create directories
-    mkdir -p "$BUNDLE_DIR"/{app,runtime,drivers/{oracle,mysql,postgresql,sqlserver}}
+    if [ "$IS_WINDOWS" = true ]; then
+        # Windows - use PowerShell to create directories with output suppressed
+        powershell -Command "New-Item -ItemType Directory -Force -Path \"$BUNDLE_DIR\", \"$BUNDLE_DIR\\app\", \"$BUNDLE_DIR\\runtime\", \"$BUNDLE_DIR\\drivers\", \"$BUNDLE_DIR\\drivers\\oracle\", \"$BUNDLE_DIR\\drivers\\mysql\", \"$BUNDLE_DIR\\drivers\\postgresql\", \"$BUNDLE_DIR\\drivers\\sqlserver\" | Out-Null"
+    else
+        # Unix/Linux
+        mkdir -p "$BUNDLE_DIR"/{app,runtime,drivers/{oracle,mysql,postgresql,sqlserver}}
+    fi
     
     # Copy templates with path conversion
     copy_file "$SCRIPT_DIR/templates/run.sh.template" "$BUNDLE_DIR/run.sh"
@@ -232,10 +333,16 @@ auto_detect_from_pom() {
 # Set bundle name if not provided
 set_bundle_name() {
     if [ -z "$BUNDLE_NAME" ]; then
-        if [ "$IS_WINDOWS" = true ]; then
-            BUNDLE_NAME="${APP_NAME}-bundle-windows"
+        # First try to use APP_NAME-based bundle name if APP_NAME is available
+        if [ -n "$APP_NAME" ]; then
+            if [ "$IS_WINDOWS" = true ]; then
+                BUNDLE_NAME="${APP_NAME}-bundle-windows"
+            else
+                BUNDLE_NAME="${APP_NAME}-bundle-linux"
+            fi
         else
-            BUNDLE_NAME="${APP_NAME}-bundle-linux"
+            # Fall back to default bundle naming
+            set_default_bundle_name
         fi
     fi
 }
@@ -248,7 +355,12 @@ auto_detect_artifact() {
         elif [ -f "build/libs/${APP_NAME}-${APP_VERSION}.jar" ]; then
             ARTIFACT="build/libs/${APP_NAME}-${APP_VERSION}.jar"
         else
-            ARTIFACT=$(find target build/libs -name "*.jar" | head -n 1)
+            if [ "$IS_WINDOWS" = true ]; then
+                # Use PowerShell to get first file on Windows
+                ARTIFACT=$(powershell -command "Get-ChildItem -Path target,build/libs -Filter *.jar -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName" 2>/dev/null)
+            else
+                ARTIFACT=$(find target build/libs -name "*.jar" | head -n 1)
+            fi
         fi
     fi
 }
@@ -268,7 +380,7 @@ download_drivers_if_requested() {
                 [ -z "$key" ] && continue
                 db_type="${key%%.driver}"
                 target_dir="$BUNDLE_NAME/drivers/$db_type"
-                mkdir -p "$target_dir"
+                create_directory "$target_dir"
                 export MAVEN_OPTS=""
                 /c/usr/bin/apache-maven-3.9.9/bin/mvn dependency:copy -Dartifact="$value" -DoutputDirectory="$target_dir" || log_warn "Failed to download $db_type driver"
             done < "$OLDPWD/$DRIVERS_FILE"
@@ -293,9 +405,20 @@ create_custom_jre() {
 
 create_bundle_readme() {
     echo "Creating bundle README..."
-    sed -e "s/\${APPLICATION_NAME}/${APP_NAME}/g" \
-        -e "s/\${BUNDLE_NAME}/${BUNDLE_NAME}/g" \
-        "$PROJECT_ROOT/create-distribution/templates/README.md.template" > "$BUNDLE_NAME/README.md"
+    if [ "$IS_WINDOWS" = true ]; then
+        # Use PowerShell for text replacement on Windows
+        README_TEMPLATE="$PROJECT_ROOT/create-distribution/templates/README.md.template"
+        README_OUTPUT="$BUNDLE_NAME/README.md"
+        # Convert paths to Windows format for PowerShell
+        README_TEMPLATE_WIN=$(cygpath -w "$README_TEMPLATE")
+        README_OUTPUT_WIN=$(cygpath -w "$README_OUTPUT")
+        powershell.exe -Command "(Get-Content -Path '$README_TEMPLATE_WIN') -replace '\\\${APPLICATION_NAME}', '$APP_NAME' -replace '\\\${BUNDLE_NAME}', '$BUNDLE_NAME' | Set-Content -Path '$README_OUTPUT_WIN'"
+    else
+        # Use sed for Unix/Linux
+        sed -e "s/\${APPLICATION_NAME}/${APP_NAME}/g" \
+            -e "s/\${BUNDLE_NAME}/${BUNDLE_NAME}/g" \
+            "$PROJECT_ROOT/create-distribution/templates/README.md.template" > "$BUNDLE_NAME/README.md"
+    fi
 }
 
 # Create archive for Windows
@@ -334,7 +457,7 @@ copy_sample_sql_scripts() {
     local src_dir="$PROJECT_ROOT/app/src/test/resources/sql"
     local dest_dir="$BUNDLE_NAME/resources/sql"
     if [ -d "$src_dir" ]; then
-        mkdir -p "$dest_dir"
+        create_directory "$dest_dir"
         cp -r "$src_dir/"* "$dest_dir/"
         log_info "Copied sample SQL scripts to $dest_dir"
     else
@@ -360,7 +483,7 @@ copy_drivers_from_target() {
     for db in oracle mysql postgresql sqlserver; do
         local src_dir="$src_base/$db"
         local dest_dir="$dest_base/$db"
-        mkdir -p "$dest_dir"
+        create_directory "$dest_dir"
         if [ -d "$src_dir" ]; then
             cp "$src_dir"/*.jar "$dest_dir/" 2>/dev/null || true
         fi
@@ -371,7 +494,7 @@ copy_drivers_from_target() {
 copy_log4j_config() {
     local src_log4j="$PROJECT_ROOT/app/src/main/resources/log4j2.xml"
     local dest_dir="$BUNDLE_NAME/resources"
-    mkdir -p "$dest_dir"
+    create_directory "$dest_dir"
     if [ -f "$src_log4j" ]; then
         cp "$src_log4j" "$dest_dir/"
         log_info "Copied log4j2.xml to $dest_dir"
@@ -383,7 +506,7 @@ copy_log4j_config() {
 copy_application_yaml() {
     local src_yaml="$PROJECT_ROOT/app/src/main/resources/application.yaml"
     local dest_dir="$BUNDLE_NAME/resources"
-    mkdir -p "$dest_dir"
+    create_directory "$dest_dir"
     if [ -f "$src_yaml" ]; then
         cp "$src_yaml" "$dest_dir/"
         log_info "Copied application.yaml to $dest_dir"
@@ -392,39 +515,12 @@ copy_application_yaml() {
     fi
 }
 
-# --- Cross-platform JAVA_HOME auto-detection ---
-if [ -z "$JAVA_HOME" ]; then
-    if [ "$IS_WINDOWS" = true ]; then
-        # Try to find java.exe using 'where' and convert to Unix path
-        JAVA_EXE_PATH=$(where java 2>/dev/null | head -n 1)
-        if [ -n "$JAVA_EXE_PATH" ]; then
-            # Remove trailing \bin\java.exe and convert to Unix path
-            JAVA_HOME_WIN=$(dirname "$(dirname "$JAVA_EXE_PATH")")
-            JAVA_HOME=$(cygpath -u "$JAVA_HOME_WIN")
-            export JAVA_HOME
-            log_info "Auto-detected JAVA_HOME as $JAVA_HOME (Windows)"
-        fi
-    else
-        JAVA_BIN=$(which java 2>/dev/null)
-        if [ -n "$JAVA_BIN" ]; then
-            JAVA_BIN=$(readlink -f "$JAVA_BIN")
-            JAVA_HOME=$(dirname $(dirname "$JAVA_BIN"))
-            export JAVA_HOME
-            log_info "Auto-detected JAVA_HOME as $JAVA_HOME (Unix)"
-        fi
-    fi
-    if [ -z "$JAVA_HOME" ]; then
-        log_warn "Could not auto-detect JAVA_HOME. Some features may not work."
-    fi
-fi
-
 # Main execution flow
 main() {
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    M2_HOME="$(find_maven_home)"
-    PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+    detect_script_locations
     parse_args "$@"
     auto_detect_from_pom
+    auto_detect_java_home
     set_bundle_name
     clean_previous_bundle
     auto_detect_artifact
@@ -437,18 +533,7 @@ main() {
     copy_bundle_templates
     copy_drivers_from_target
     create_custom_jre
-
-    # Create the runtime directory for custom JRE and security files
-    mkdir -p "$BUNDLE_NAME/runtime/lib/security"
-
-    # Copy Java security files into the bundle's runtime
-    if [ -n "$JAVA_HOME" ] && [ -d "$JAVA_HOME/lib/security" ]; then
-        cp -r "$JAVA_HOME/lib/security/"* "$BUNDLE_NAME/runtime/lib/security/"
-        log_info "Copied Java security files from $JAVA_HOME/lib/security to $BUNDLE_NAME/runtime/lib/security"
-    else
-        log_warn "JAVA_HOME is not set or $JAVA_HOME/lib/security does not exist. Skipping security files copy."
-    fi
-
+    copy_java_security_files "$BUNDLE_NAME"
     create_bundle_readme
     create_bundle_archive
     print_final_instructions

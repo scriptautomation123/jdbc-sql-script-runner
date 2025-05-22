@@ -1,13 +1,13 @@
 package com.example.shelldemo.vault;
 
-import java.net.http.HttpClient;
+import okhttp3.OkHttpClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class VaultSecretFetcherBuilder {
-    private HttpClient client;
+    private OkHttpClient client;
     private ObjectMapper mapper;
 
-    public VaultSecretFetcherBuilder httpClient(HttpClient client) {
+    public VaultSecretFetcherBuilder httpClient(OkHttpClient client) {
         this.client = client;
         return this;
     }

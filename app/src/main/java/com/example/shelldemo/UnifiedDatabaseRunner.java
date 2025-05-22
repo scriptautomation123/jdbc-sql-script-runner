@@ -31,6 +31,7 @@ import java.util.Map;
 @Command(name = "db", mixinStandardHelpOptions = true, version = "1.0",description = "Unified Database CLI Tool")
 public class UnifiedDatabaseRunner implements Callable<Integer> {
     private static final Logger logger = LogManager.getLogger(UnifiedDatabaseRunner.class);
+    private static final String ERROR_PREFIX = "ERROR: ";
     
     @Option(names = {"-t", "--type"}, required = true,description = "Database type (oracle, sqlserver, postgresql, mysql)")
     private String dbType;
@@ -144,6 +145,7 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
             result = runDatabaseOperation();
         } catch (DatabaseOperationException e) {
             logger.error("Database operation failed: {}", e.getMessage(), e);
+            System.err.println(ERROR_PREFIX + extractOraError(e));
             result = 1;
         } catch (IllegalArgumentException | IllegalStateException e) {
             logger.error("Invalid operation parameters: {}", e.getMessage(), e);
@@ -327,12 +329,14 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
 
             if (scriptFile.isDirectory()) {
                 logger.error("Target '{}' is a directory, expected a file or procedure name", target);
+                System.err.println(ERROR_PREFIX + "Target is a directory, expected a file or procedure name.");
                 return 2;
             }
 
             if (!scriptFile.exists()) {
                 if (target.contains("/") || target.contains("\\")) {
                     logger.error("File not found: {}", target);
+                    System.err.println(ERROR_PREFIX + "File not found: " + target);
                     return 2;
                 }
                 logger.debug("Executing as stored procedure: {}", target);
@@ -355,12 +359,15 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
             return 0;
         } catch (DatabaseOperationException e) {
             logger.error("Database operation failed: {}", e.getMessage(), e);
+            System.err.println(ERROR_PREFIX + extractOraError(e));
             return 1;
         } catch (IllegalArgumentException | IllegalStateException e) {
             logger.error("Invalid operation parameters: {}", e.getMessage(), e);
+            System.err.println(ERROR_PREFIX + e.getMessage());
             return 2;
         } catch (Exception e) {
             logger.error("Unexpected error: {}", e.getMessage(), e);
+            System.err.println(ERROR_PREFIX + extractOraError(e));
             return 3;
         } finally {
             logger.debug("Exiting runDatabaseOperation() with result: {}", 0);
@@ -408,6 +415,30 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
         } else {
             logger.warn("Driver directory does not exist: {}", driverDir);
         }
+    }
+
+    private static String extractOraError(Throwable ex) {
+        while (ex != null) {
+            String oraMessage = findOraMessage(ex.getMessage());
+            if (oraMessage != null) {
+                return oraMessage;
+            }
+            ex = ex.getCause();
+        }
+        return "Could not connect to the database. See log for details.";
+    }
+
+    private static String findOraMessage(String message) {
+        if (message == null || !message.contains("ORA-")) {
+            return null;
+        }
+        for (String line : message.split("\n")) {
+            if (line.contains("ORA-")) {
+                int endIdx = line.indexOf('.');
+                return endIdx > 0 ? line.substring(0, endIdx + 1) : line.trim();
+            }
+        }
+        return null;
     }
 
     public static void main(String[] args) {
