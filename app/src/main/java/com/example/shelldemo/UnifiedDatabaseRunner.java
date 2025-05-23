@@ -31,6 +31,8 @@ import java.util.Map;
 @Command(name = "db", mixinStandardHelpOptions = true, version = "1.0",description = "Unified Database CLI Tool")
 public class UnifiedDatabaseRunner implements Callable<Integer> {
     private static final Logger logger = LogManager.getLogger(UnifiedDatabaseRunner.class);
+     private static final Logger resultLogger = LogManager.getLogger("com.example.shelldemo.resultset");
+
     private static final String ERROR_PREFIX = "ERROR: ";
     
     @Option(names = {"-t", "--type"}, required = true,description = "Database type (oracle, sqlserver, postgresql, mysql)")
@@ -237,6 +239,9 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
 
     private boolean tryFetchFromVault(Map<String, Object> vault) {
         try {
+            //logger.result("vault {}", vault);
+            resultLogger.info("vault:\n" + vault);
+
             password = fetchPasswordFromVaultWithParams(
                 (String) vault.get("base-url"),
                 (String) vault.get("role-id"),
