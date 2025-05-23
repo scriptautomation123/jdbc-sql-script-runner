@@ -208,7 +208,7 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
             password = fetchPasswordFromVaultWithParams(vaultBaseUrl, vaultRoleId, vaultSecretId, vaultAit);
             return true;
         } catch (VaultOperationException e) {
-            logger.error("Failed to fetch password from Vault: {}", e.getMessage());
+            logger.error("handleVaultSecret Failed to fetch password from Vault: {}", e.getMessage());
             return false;
         }
     }
@@ -223,9 +223,7 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
         var vaultConfigs = config.getVaultConfigs();
         
         if (vaultConfigs != null && !vaultConfigs.isEmpty()) {
-            var matchingVault = vaultConfigs.stream()
-                .filter(vault -> username.equals(vault.get("id")))
-                .findFirst();
+            var matchingVault = vaultConfigs.stream().filter(vault -> username.equals(vault.get("id"))).findFirst();
 
             if (matchingVault.isPresent() && tryFetchFromVault(matchingVault.get())) {
                 return true;
@@ -239,8 +237,8 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
 
     private boolean tryFetchFromVault(Map<String, Object> vault) {
         try {
-            //logger.result("vault {}", vault);
-            resultLogger.info("vault:\n" + vault);
+  
+            resultLogger.info("Vault config: {}", vault);
 
             password = fetchPasswordFromVaultWithParams(
                 (String) vault.get("base-url"),
@@ -253,9 +251,23 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
                 return true;
             }
         } catch (VaultOperationException e) {
-            logger.error("Failed to fetch password from Vault: {}", e.getMessage());
+            logger.error("tryFetchFromVault Failed to fetch password from Vault: {}", e.getMessage());
         }
         return false;
+    }
+
+    private String fetchPasswordFromVaultWithParams(String baseUrl, String roleId, String secretId, String ait) throws VaultOperationException {
+        String dbName = database;
+        if (baseUrl == null || dbName == null || roleId == null || secretId == null || ait == null) {
+            throw new VaultOperationException("Missing required Vault configuration parameters", null, secretId);
+        }
+        try {
+
+            
+            return new VaultSecretFetcherBuilder().build().fetchOraclePassword( baseUrl, roleId, secretId, dbName, ait, username);
+        } catch (VaultException e) {
+            throw new VaultOperationException("Failed to fetch password from Vault: " + e.getMessage(), e, secretId);
+        }
     }
 
     private boolean validateOracleConnection() {
@@ -379,21 +391,7 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
         }
     }
 
-    private String fetchPasswordFromVaultWithParams(String baseUrl, String roleId, String secretId, String ait) throws VaultOperationException {
-        String dbName = database;
-        if (baseUrl == null || dbName == null || roleId == null || secretId == null || ait == null) {
-            throw new VaultOperationException("Missing required Vault configuration parameters", null, secretId);
-        }
-        try {
-            return new VaultSecretFetcherBuilder()
-                .build()
-                .fetchOraclePassword(
-                    baseUrl, roleId, secretId, dbName, ait, username
-                );
-        } catch (VaultException e) {
-            throw new VaultOperationException("Failed to fetch password from Vault: " + e.getMessage(), e, secretId);
-        }
-    }
+
 
     /**
      * Auto-select the correct JDBC driver if --driver-path is not provided, based on dbType.

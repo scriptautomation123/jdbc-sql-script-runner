@@ -87,6 +87,7 @@
         </Logger>
 
         <Logger name="com.example.shelldemo.UnifiedDatabaseRunner" level="ERROR" additivity="false">
+            <AppenderRef ref="Console"/>
             <AppenderRef ref="AsyncFile"/>
             <AppenderRef ref="ErrorFile"/>
         </Logger>

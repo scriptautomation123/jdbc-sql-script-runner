@@ -121,11 +121,11 @@ databases:
           "2013": "CONN_FAILED"       # Lost connection
 
 vaults:
-  - id: "user1"
-    base-url: ""
-    role-id: ""
-    secret-id: ""
-    ait: ""
+  - id: "HR"
+    base-url: "vault-lle"
+    role-id: "KIJJAD"
+    secret-id: "9080xlkvjkluwert"
+    ait: "76455654"
   - id: "user2"
     base-url: ""
     role-id: ""
