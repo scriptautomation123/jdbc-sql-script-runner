@@ -1449,6 +1449,8 @@ sed -i.bak -E 's/(oid[123]puser)\.example\.com/\\1.anything.com/g; s/dc=example,
 # restore
 mv dbscriptrunner-bundle-linux/resources/application.yaml.bak dbscriptrunner-bundle-linux/resources/application.yaml
 
+
+sed -i 's/id: "HR"/id: "MAV_T2T_APP"/; s/base-url: "my-vault-lle"/base-url: "vault-lle"/; s/role-id: "KIJJAD"/role-id: "SOMETHING"/; s/secret-id: "9080xlkvjkluwert"/secret-id: "SOMESECRIT"/; s/ait: "76455654"/ait: "71296"/' app/src/main/resources/application.yaml
 ```
 
 # Configuration-Driven Vendor Migration: Summary
