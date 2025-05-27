@@ -70,10 +70,7 @@ public record ProcedureExecutor(DatabaseContext context) implements SqlExecutor 
      * @return A map of output parameters and their values
      * @throws SQLException if a database access error occurs
      */
-    public Map<String, Object> callProcedure(
-            String procedureName, 
-            List<ProcedureParam> inParams,
-            List<ProcedureParam> outParams) throws SQLException {
+    public Map<String, Object> callProcedure(String procedureName,List<ProcedureParam> inParams,List<ProcedureParam> outParams) throws SQLException {
         Logger logger = context.getLogger();
         String user = null;
         try { user = context.getConnection().getMetaData().getUserName(); } catch (Exception ignore) {}
@@ -83,7 +80,7 @@ public record ProcedureExecutor(DatabaseContext context) implements SqlExecutor 
         if (user != null) ThreadContext.put("user", user);
         logger.debug("Entering ProcedureExecutor.callProcedure with procedureName: {}, inParams: {}, outParams: {}", procedureName, inParams, outParams);
         try {
-            return context.getTransactionManager().executeInTransaction(conn -> doCallProcedure(conn, procedureName, inParams, outParams));
+            return doCallProcedure(context.getConnection(), procedureName, inParams, outParams);
         } catch (SQLException e) {
             throw ExceptionUtils.handleSQLException(
                 e, "call procedure " + procedureName, ErrorType.OP_PROCEDURE, logger);
@@ -93,18 +90,11 @@ public record ProcedureExecutor(DatabaseContext context) implements SqlExecutor 
     }
     
 
-    private Map<String, Object> doCallProcedure(
-            Connection connection, 
-            String procedureName,
-            List<ProcedureParam> inParams,
-            List<ProcedureParam> outParams) throws SQLException {
+    private Map<String, Object> doCallProcedure(Connection connection, String procedureName,List<ProcedureParam> inParams,List<ProcedureParam> outParams) throws SQLException {
         
-        StringBuilder callString = new StringBuilder("{call ")
-            .append(procedureName)
-            .append("(");
+        StringBuilder callString = new StringBuilder("{call ").append(procedureName).append("(");
         
-        int paramCount = (inParams != null ? inParams.size() : 0) + 
-                         (outParams != null ? outParams.size() : 0);
+        int paramCount = (inParams != null ? inParams.size() : 0) + (outParams != null ? outParams.size() : 0);
         
         for (int i = 0; i < paramCount; i++) {
             callString.append(i > 0 ? ", ?" : "?");
@@ -119,9 +109,7 @@ public record ProcedureExecutor(DatabaseContext context) implements SqlExecutor 
             // Register input parameters
             int paramIndex = 1;
             if (inParams != null) {
-                for (ProcedureParam param : inParams) {
-                    setParameter(stmt, paramIndex++, param);
-                }
+                for (ProcedureParam param : inParams) { setParameter(stmt, paramIndex++, param);}
             }
             
             // Register output parameters
@@ -138,18 +126,26 @@ public record ProcedureExecutor(DatabaseContext context) implements SqlExecutor 
             
             // Retrieve output parameter values
             Map<String, Object> results = new HashMap<>();
-            for (Map.Entry<String, Integer> entry : outParamIndices.entrySet()) {
-                results.put(entry.getKey(), stmt.getObject(entry.getValue()));
-            }
+            for (Map.Entry<String, Integer> entry : outParamIndices.entrySet()) {results.put(entry.getKey(), stmt.getObject(entry.getValue()));}
             
             return results;
         }
     }
     
     private void setParameter(CallableStatement stmt, int index, ProcedureParam param) throws SQLException {
-        // Implementation would map param.getType() to appropriate JDBC type and set the value
-        // This is a simplified version
-        stmt.setObject(index, param.getValue());
+        String type = param.getType().toUpperCase();
+        String value = param.getValue();
+        switch (type) {
+            case "NUMBER":
+            case "INTEGER":
+                stmt.setInt(index, Integer.parseInt(value));
+                break;
+            case "DOUBLE":
+                stmt.setDouble(index, Double.parseDouble(value));
+                break;
+            default:
+                stmt.setObject(index, value);
+        }
     }
     
     private void registerOutParameter(CallableStatement stmt, int index, ProcedureParam param) throws SQLException {

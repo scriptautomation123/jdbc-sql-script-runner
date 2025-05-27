@@ -1533,3 +1533,22 @@ static Stream<Arguments> vendorAndConnectionProvider() {
 - **Consistency:** All vendors are tested with the same logic.
 
 For more details, see the `UnifiedDatabaseRunnerTest.java` source file.
+
+
+```bash
+./dbscriptrunner-bundle-linux/run.sh \
+-t oracle \
+-d FREEPDB1 \
+-u HR \
+"MAVOWNER.TempTable_OneHadoop_proc" --input "in_schema_nm:VARCHAR2:MAV_OWNER,in_src_table_nm:VARCHAR2:CUST_INSGHT_DLY,in_typ_cd:INTEGER:136,in_grant_grp:VARCHAR2:HADOOP_DML_ROLE" --output "p_outmsg:STRING"
+
+
+
+            case "STRING", "VARCHAR", "VARCHAR2" -> Types.VARCHAR;
+            case "INTEGER", "INT" -> Types.INTEGER;
+            case "DOUBLE", "NUMBER" -> Types.DOUBLE;
+            case "DATE" -> Types.DATE;
+            case "TIMESTAMP" -> Types.TIMESTAMP;
+            case "BOOLEAN" -> Types.BOOLEAN;
+            default -> Types.OTHER;
+```
