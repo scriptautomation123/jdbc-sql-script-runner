@@ -420,7 +420,8 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
                         case OUT -> outParams.add(param);
                     }
                 }
-                operation.callStoredProcedure(target, inParams, outParams);
+                Map<String, Object> result = operation.callStoredProcedure(target, inParams, outParams);
+                resultLogger.info("p_outmsg: {}", result.get("p_outmsg"));
                 return 0;
             }
 
