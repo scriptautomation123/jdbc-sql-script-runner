@@ -16,7 +16,6 @@
     <module>vault-password-fetcher</module>
     <module>app</module>
     <module>create-distribution</module>
-    <module>examples</module>
   </modules>
 
   <properties>
