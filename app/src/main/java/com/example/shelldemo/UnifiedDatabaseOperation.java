@@ -197,10 +197,7 @@ public class UnifiedDatabaseOperation implements AutoCloseable {
      * @return A map of output parameters and their values
      * @throws SQLException if a database access error occurs
      */
-    public Map<String, Object> callStoredProcedure(
-            String procedureName, 
-            List<ProcedureParam> inParams,
-            List<ProcedureParam> outParams) throws SQLException {
+    public Map<String, Object> callStoredProcedure(String procedureName, List<ProcedureParam> inParams,List<ProcedureParam> outParams) throws SQLException {
         logger.debug("Entering callStoredProcedure with procedureName: {}, inParams: {}, outParams: {}", procedureName, inParams, outParams);
         Map<String, Object> result = procedureExecutor.callProcedure(procedureName, inParams, outParams);
         logger.debug("Exiting callStoredProcedure with result: {}", result);

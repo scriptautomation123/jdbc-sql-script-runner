@@ -24,6 +24,8 @@ import com.example.shelldemo.connection.DatabaseConnectionFactory;
 import com.example.shelldemo.config.ConfigurationHolder;
 import com.example.shelldemo.vault.exception.VaultException;
 import com.example.shelldemo.validate.DatabaserOperationValidator;
+import com.example.shelldemo.parser.SqlScriptParser;
+import com.example.shelldemo.parser.SqlScriptParser.ProcedureParam;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -329,71 +331,7 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
         return "";
     }
 
-    private int runDatabaseOperation() {
-        logger.debug("Entering runDatabaseOperation()");
-        try (UnifiedDatabaseOperation operation = new UnifiedDatabaseOperationBuilder()
-                .host(host)
-                .port(port)
-                .username(username)
-                .password(password)
-                .dbType(dbType)
-                .serviceName(database)
-                .connectionType(connectionType)
-                .transactional(transactional)
-                .build()
-            ) {
-            File scriptFile = new File(target);
-
-            if (scriptFile.isDirectory()) {
-                logger.error("Target '{}' is a directory, expected a file or procedure name", target);
-                System.err.println(ERROR_PREFIX + "Target is a directory, expected a file or procedure name.");
-                return 2;
-            }
-
-            if (!scriptFile.exists()) {
-                if (target.contains("/") || target.contains("\\")) {
-                    logger.error("File not found: {}", target);
-                    System.err.println(ERROR_PREFIX + "File not found: " + target);
-                    return 2;
-                }
-                logger.debug("Executing as stored procedure: {}", target);
-                operation.callStoredProcedure(target, null, null);
-                return 0;
-            }
-
-            if (preFlight) {
-                new DatabaserOperationValidator(dbType).validateScript(
-                    operation.getContext().getConnection(),
-                    scriptFile.getPath(),
-                    showExplainPlan,
-                    operation.getVendor()
-                );
-                return 0;
-            }
-
-            logger.debug("Executing as script file: {}", scriptFile.getAbsolutePath());
-            operation.executeScript(scriptFile);
-            return 0;
-        } catch (DatabaseOperationException e) {
-            logger.error("Database operation failed: {}", e.getMessage(), e);
-            System.err.println(ERROR_PREFIX + extractOraError(e));
-            return 1;
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            logger.error("Invalid operation parameters: {}", e.getMessage(), e);
-            System.err.println(ERROR_PREFIX + e.getMessage());
-            return 2;
-        } catch (Exception e) {
-            logger.error("Unexpected error: {}", e.getMessage(), e);
-            System.err.println(ERROR_PREFIX + extractOraError(e));
-            return 3;
-        } finally {
-            logger.debug("Exiting runDatabaseOperation() with result: {}", 0);
-        }
-    }
-
-
-
-    /**
+      /**
      * Auto-select the correct JDBC driver if --driver-path is not provided, based on dbType.
      */
     private void setupDriverPathIfNeeded() {
@@ -443,6 +381,82 @@ public class UnifiedDatabaseRunner implements Callable<Integer> {
         }
         return null;
     }
+    
+    private int runDatabaseOperation() {
+        logger.debug("Entering runDatabaseOperation()");
+        try (UnifiedDatabaseOperation operation = new UnifiedDatabaseOperationBuilder()
+                .host(host)
+                .port(port)
+                .username(username)
+                .password(password)
+                .dbType(dbType)
+                .serviceName(database)
+                .connectionType(connectionType)
+                .transactional(transactional)
+                .build()
+            ) {
+            File scriptFile = new File(target);
+
+            if (scriptFile.isDirectory()) {
+                logger.error("Target '{}' is a directory, expected a file or procedure name", target);
+                System.err.println(ERROR_PREFIX + "Target is a directory, expected a file or procedure name.");
+                return 2;
+            }
+
+            if (!scriptFile.exists()) {
+                if (target.contains("/") || target.contains("\\")) {
+                    logger.error("File not found: {}", target);
+                    System.err.println(ERROR_PREFIX + "File not found: " + target);
+                    return 2;
+                }
+                logger.debug("Executing as stored procedure: {}", target);
+                // Parse parameters from CLI
+                java.util.List<ProcedureParam> allParams = SqlScriptParser.parseProcedureParams(inputParams, outputParams, ioParams);
+                java.util.List<ProcedureParam> inParams = new java.util.ArrayList<>();
+                java.util.List<ProcedureParam> outParams = new java.util.ArrayList<>();
+                for (ProcedureParam param : allParams) {
+                    switch (param.getParamType()) {
+                        case IN, INOUT -> inParams.add(param);
+                        case OUT -> outParams.add(param);
+                    }
+                }
+                operation.callStoredProcedure(target, inParams, outParams);
+                return 0;
+            }
+
+            if (preFlight) {
+                new DatabaserOperationValidator(dbType).validateScript(
+                    operation.getContext().getConnection(),
+                    scriptFile.getPath(),
+                    showExplainPlan,
+                    operation.getVendor()
+                );
+                return 0;
+            }
+
+            logger.debug("Executing as script file: {}", scriptFile.getAbsolutePath());
+            operation.executeScript(scriptFile);
+            return 0;
+        } catch (DatabaseOperationException e) {
+            logger.error("Database operation failed: {}", e.getMessage(), e);
+            System.err.println(ERROR_PREFIX + extractOraError(e));
+            return 1;
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            logger.error("Invalid operation parameters: {}", e.getMessage(), e);
+            System.err.println(ERROR_PREFIX + e.getMessage());
+            return 2;
+        } catch (Exception e) {
+            logger.error("Unexpected error: {}", e.getMessage(), e);
+            System.err.println(ERROR_PREFIX + extractOraError(e));
+            return 3;
+        } finally {
+            logger.debug("Exiting runDatabaseOperation() with result: {}", 0);
+        }
+    }
+
+
+
+  
 
     public static void main(String[] args) {
         if (logger.isDebugEnabled()) {
